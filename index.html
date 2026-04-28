@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Title Matcher — by Pravin Kadam</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#eef0f4;--white:#fff;--surface:#f5f6f9;
+  --border:#dde1ea;--text:#1a1e2e;--muted:#6b7280;
+  --match:#0a7c4e;--match-bg:#e6f7f1;--match-bd:#9fdece;
+  --disc:#c0392b;--disc-bg:#fdf0ef;--disc-bd:#f1b0aa;
+  --consider:#92600a;--consider-bg:#fef9ec;--consider-bd:#f6d97a;
+  --dark:#1a1e2e;--accent:#1a3cff;
+}
+
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+}
+
+/* ══ LOGIN SCREEN ══ */
+#loginScreen{
+  width:100%;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;padding:24px 16px;
+  background:linear-gradient(135deg,#1a1e2e 0%,#0d2b6622 100%);
+}
+.login-card{
+  background:var(--white);border-radius:18px;padding:40px 36px 36px;
+  width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.2);
+}
+.login-brand{text-align:center;margin-bottom:28px;}
+.login-logo{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--dark);color:#fff;font-family:'Courier New',Courier,monospace;
+  font-size:10px;letter-spacing:1.8px;text-transform:uppercase;
+  padding:6px 14px;border-radius:5px;margin-bottom:14px;
+}
+.login-title{font-size:24px;font-weight:700;color:var(--dark);letter-spacing:-0.5px;}
+.login-author{
+  display:block;font-size:24px;font-weight:700;
+  background:linear-gradient(90deg,#1a3cff,#0a9e7c);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.login-sub{font-size:12px;color:var(--muted);margin-top:6px;font-family:'Courier New',Courier,monospace;}
+.login-field{margin-bottom:16px;}
+.login-label{
+  display:block;font-family:'Courier New',Courier,monospace;
+  font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:6px;
+}
+.login-input{
+  width:100%;background:var(--surface);border:1.5px solid var(--border);
+  border-radius:8px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+  font-size:14px;color:var(--text);padding:12px 14px;outline:none;
+  transition:border-color 0.15s;
+}
+.login-input:focus{border-color:var(--accent);}
+.login-input::placeholder{color:#b0b8c8;}
+.login-btn{
+  width:100%;padding:13px;background:var(--dark);color:#fff;border:none;
+  border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;
+  transition:all 0.15s;margin-top:6px;
+  font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+}
+.login-btn:hover{background:#2d3450;transform:translateY(-1px);}
+.login-btn:active{transform:none;}
+.login-error{
+  display:none;background:#fdf0ef;border:1px solid var(--disc-bd);color:var(--disc);
+  border-radius:7px;padding:10px 13px;font-size:12px;margin-top:12px;text-align:center;
+}
+.login-error.show{display:block;}
+.login-footer-note{
+  text-align:center;font-family:'Courier New',Courier,monospace;
+  font-size:10px;color:#c0c8d8;margin-top:20px;
+}
+
+/* Welcome Toast */
+#welcomeToast{
+  display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);
+  background:var(--dark);color:#fff;padding:13px 24px;border-radius:10px;
+  font-size:14px;font-weight:600;z-index:9999;
+  box-shadow:0 8px 30px rgba(0,0,0,0.25);white-space:nowrap;
+}
+#welcomeToast.show{display:block;animation:slideDown 0.35s ease;}
+@keyframes slideDown{from{opacity:0;top:5px}to{opacity:1;top:20px}}
+
+/* ══ APP SCREEN ══ */
+#appScreen{display:none;width:100%;padding:28px 14px 56px;flex-direction:column;align-items:center;}
+#appScreen.visible{display:flex;}
+.wrapper{width:100%;max-width:720px;}
+
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.top-user{font-family:'Courier New',Courier,monospace;font-size:11px;color:var(--muted);}
+.top-user strong{color:var(--accent);}
+.logout-btn{
+  background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;
+  font-family:'Courier New',Courier,monospace;transition:all 0.15s;
+}
+.logout-btn:hover{border-color:var(--disc);color:var(--disc);}
+
+/* Header */
+header{margin-bottom:22px;}
+.header-tag{
+  display:inline-flex;align-items:center;gap:6px;background:var(--dark);color:#fff;
+  font-family:'Courier New',Courier,monospace;font-size:10px;letter-spacing:1.5px;
+  text-transform:uppercase;padding:5px 12px;border-radius:4px;margin-bottom:10px;
+}
+h1{font-size:clamp(22px,4vw,30px);font-weight:700;letter-spacing:-0.5px;display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;}
+.title-main{color:var(--dark);}
+.author-name{
+  font-size:clamp(22px,4vw,30px);font-weight:700;
+  background:linear-gradient(90deg,#1a3cff,#0a9e7c);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.subtitle{color:var(--muted);font-size:12px;margin-top:4px;font-family:'Courier New',Courier,monospace;}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;background:var(--border);border-radius:10px 10px 0 0;padding:4px 4px 0;}
+.tab{
+  flex:1;padding:10px 8px;background:transparent;border:none;
+  font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+  font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;
+  border-radius:8px 8px 0 0;transition:all 0.15s;
+}
+.tab.active{background:var(--white);color:var(--dark);}
+.tab:hover:not(.active){color:var(--text);}
+.panel{
+  background:var(--white);border:1px solid var(--border);border-top:none;
+  border-radius:0 0 12px 12px;padding:26px;display:none;
+}
+.panel.active{display:block;}
+
+/* Form fields */
+.field-label{
+  font-family:'Courier New',Courier,monospace;font-size:10px;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);
+  margin-bottom:6px;display:block;
+}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+@media(max-width:500px){.input-row{grid-template-columns:1fr;}}
+.field{display:flex;flex-direction:column;}
+input[type=text],input[type=password]{
+  background:var(--surface);border:1.5px solid var(--border);border-radius:8px;
+  font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:14px;
+  color:var(--text);padding:11px 14px;outline:none;transition:border-color 0.15s;width:100%;
+}
+input[type=text]:focus,input[type=password]:focus{border-color:var(--accent);}
+input[type=text]::placeholder,input[type=password]::placeholder{color:#b0b8c8;}
+
+/* Buttons */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:13px;background:var(--dark);color:#fff;border:none;
+  border-radius:8px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;transition:all 0.15s;margin-top:4px;
+}
+.btn:hover{background:#2d3450;transform:translateY(-1px);}
+.btn:active{transform:none;}
+.btn-sm{padding:9px 18px;width:auto;font-size:12px;border-radius:6px;margin-top:0;}
+.btn-link{
+  background:none;border:none;font-size:11px;color:var(--muted);cursor:pointer;
+  font-family:'Courier New',Courier,monospace;text-decoration:underline;letter-spacing:0.5px;
+}
+.btn-link:hover{color:var(--text);}
+
+/* Result */
+.result{display:none;border-radius:10px;padding:20px 24px;margin-top:18px;border:2px solid;}
+.result.show{display:block;animation:pop 0.2s ease;}
+.result.clear{background:var(--match-bg);border-color:var(--match-bd);}
+.result.discrepancy{background:var(--disc-bg);border-color:var(--disc-bd);}
+.result.consider{background:var(--consider-bg);border-color:var(--consider-bd);}
+.result-verdict{display:flex;align-items:center;gap:10px;}
+.v-icon{font-size:24px;line-height:1;}
+.v-word{font-size:22px;font-weight:700;letter-spacing:-0.3px;}
+.result.clear .v-word{color:var(--match);}
+.result.discrepancy .v-word{color:var(--disc);}
+.result.consider .v-word{color:var(--consider);}
+.v-rule{
+  font-family:'Courier New',Courier,monospace;font-size:11.5px;line-height:1.65;
+  margin-top:11px;padding-top:11px;border-top:1px solid;
+}
+.result.clear .v-rule{color:var(--match);border-color:var(--match-bd);}
+.result.discrepancy .v-rule{color:var(--disc);border-color:var(--disc-bd);}
+.result.consider .v-rule{color:var(--consider);border-color:var(--consider-bd);}
+.reset-row{margin-top:10px;text-align:right;}
+
+/* SOP */
+.sop-section{margin-bottom:22px;}
+.sop-title{font-weight:700;font-size:13px;color:var(--dark);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border);}
+.sop-row{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:6px;font-size:12px;}
+.sop-row:last-child{margin-bottom:0;}
+.sop-case{flex:2;padding:9px 12px;background:var(--surface);font-family:'Courier New',Courier,monospace;color:var(--text);border-right:1px solid var(--border);}
+.sop-outcome{flex:1;padding:9px 12px;font-weight:600;font-size:11px;display:flex;align-items:center;}
+.sop-outcome.clear{color:var(--match);background:var(--match-bg);}
+.sop-outcome.consider{color:var(--consider);background:var(--consider-bg);}
+
+/* Dictionary */
+.dict-note{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:'Courier New',Courier,monospace;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:18px;}
+.dict-note strong{color:var(--text);}
+.add-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:20px;}
+@media(max-width:480px){.add-row{grid-template-columns:1fr 1fr;}.add-row .btn-sm{grid-column:1/-1;}}
+.dict-list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;}
+.dict-item{
+  display:flex;align-items:flex-start;gap:8px;background:var(--surface);
+  border:1px solid var(--border);border-radius:8px;padding:9px 12px;
+  font-family:'Courier New',Courier,monospace;font-size:12px;
+}
+.di-body{flex:1;}
+.di-titles{color:var(--text);}
+.di-eq{color:var(--muted);margin:0 5px;}
+.di-by{display:block;font-size:10px;color:var(--muted);margin-top:3px;font-style:italic;}
+.di-by span{color:var(--accent);font-style:normal;font-weight:600;}
+.di-del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:17px;line-height:1;padding:0 3px;transition:color 0.15s;flex-shrink:0;}
+.di-del:hover{color:var(--disc);}
+.dict-empty{text-align:center;padding:24px;font-family:'Courier New',Courier,monospace;font-size:12px;color:var(--muted);border:1.5px dashed var(--border);border-radius:8px;}
+.save-note{font-family:'Courier New',Courier,monospace;font-size:11px;color:var(--muted);margin-top:12px;text-align:right;}
+
+/* Abbreviations */
+.abbr-table{width:100%;border-collapse:collapse;font-size:12px;font-family:'Courier New',Courier,monospace;}
+.abbr-table th{text-align:left;padding:7px 10px;background:var(--surface);border:1px solid var(--border);font-weight:600;color:var(--dark);font-size:10px;letter-spacing:1px;text-transform:uppercase;}
+.abbr-table td{padding:7px 10px;border:1px solid var(--border);color:var(--text);}
+.abbr-table tr:nth-child(even) td{background:var(--surface);}
+.abbr-wrap{max-height:420px;overflow-y:auto;border-radius:8px;border:1px solid var(--border);}
+
+footer{text-align:center;color:var(--muted);font-size:11px;margin-top:24px;font-family:'Courier New',Courier,monospace;letter-spacing:0.5px;}
+
+@keyframes pop{from{opacity:0;transform:scale(0.97) translateY(4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-logo">&#128269; BGV Tool</div>
+      <div class="login-title">Job Title Matcher<span class="login-author">by Pravin Kadam</span></div>
+      <p class="login-sub">Sign in to continue</p>
+    </div>
+    <div class="login-field">
+      <label class="login-label" for="loginName">Your Name</label>
+      <input class="login-input" type="text" id="loginName" placeholder="Enter your full name" autocomplete="off">
+    </div>
+    <div class="login-field">
+      <label class="login-label" for="loginPass">Password</label>
+      <input class="login-input" type="password" id="loginPass" placeholder="Enter password" autocomplete="off">
+    </div>
+    <button class="login-btn" id="loginBtn">Sign In</button>
+    <div class="login-error" id="loginError">&#10060; Incorrect password. Please try again.</div>
+    <p class="login-footer-note">Designed &amp; Built by Pravin Kadam</p>
+  </div>
+</div>
+
+<div id="welcomeToast"></div>
+
+<!-- APP -->
+<div id="appScreen">
+<div class="wrapper">
+  <div class="top-bar">
+    <span class="top-user">Logged in as: <strong id="currentUserLabel"></strong></span>
+    <button class="logout-btn" id="logoutBtn">Sign Out</button>
+  </div>
+  <header>
+    <div class="header-tag">&#128269; BGV Tool</div>
+    <h1>
+      <span class="title-main">Job Title Matcher</span>
+      <span class="author-name">by Pravin Kadam</span>
+    </h1>
+    <p class="subtitle">Scores based on company SOP &mdash; Clear / Consider / Discrepancy</p>
+  </header>
+
+  <div class="tabs" id="tabBar">
+    <button class="tab active" data-tab="matcher">Matcher</button>
+    <button class="tab" data-tab="sop">SOP Rules</button>
+    <button class="tab" data-tab="dictionary">Custom Dictionary</button>
+    <button class="tab" data-tab="abbrev">Abbreviations</button>
+  </div>
+
+  <!-- MATCHER -->
+  <div class="panel active" id="panel-matcher">
+    <div class="input-row">
+      <div class="field">
+        <span class="field-label">Candidate Provided Title</span>
+        <input type="text" id="cTitle" placeholder="e.g. AM">
+      </div>
+      <div class="field">
+        <span class="field-label">Employer Verified Title</span>
+        <input type="text" id="eTitle" placeholder="e.g. Assistant Manager">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:16px;">
+      <span class="field-label">Record Type <span style="color:#c0c8d8;">(optional)</span></span>
+      <input type="text" id="recType" placeholder="e.g. Phone, Email, TWN, Fax">
+    </div>
+    <button class="btn" id="matchBtn">&#9654; Check Title</button>
+    <div class="result" id="resultBox">
+      <div class="result-verdict">
+        <div class="v-icon" id="vIcon"></div>
+        <div class="v-word" id="vWord"></div>
+      </div>
+      <div class="v-rule" id="vRule"></div>
+    </div>
+    <div class="reset-row" id="resetRow" style="display:none;">
+      <button class="btn-link" id="resetBtn">&#8617; Check another</button>
+    </div>
+  </div>
+
+  <!-- SOP -->
+  <div class="panel" id="panel-sop">
+    <div class="sop-section">
+      <div class="sop-title">&#9989; Close as CLEAR / VERIFIED</div>
+      <div class="sop-row"><div class="sop-case">Initials vs Full form &mdash; e.g. AM vs Assistant Manager</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Abbreviations &mdash; e.g. Sr. vs Senior, Asst vs Assistant</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Truncated title &mdash; e.g. Customer Service Repr vs Customer Service Representative</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Gender variant &mdash; e.g. Waiter vs Waitress, Host vs Hostess</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Jumbled words &mdash; e.g. Director of Human Resources vs Human Resources Director</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Grade (None) vs Grade 1 only &mdash; e.g. VP vs VP 1</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Student Worker / Intern vs any other title</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Job Title vs Title + Department &mdash; e.g. Director vs Director Operations</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Job Title vs Numeric code &mdash; e.g. Research Associate vs 10947809</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Job Title vs Temporary Employee</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">TWN: Employee / N/A / Blank / Default / New Employee / Staff</div><div class="sop-outcome clear">CLEAR (TWN)</div></div>
+      <div class="sop-row"><div class="sop-case">Multiple titles &mdash; at least one matches &mdash; e.g. Senior Manager vs Senior Manager/Operations Manager</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Nurse / Registered Nurse / CNA / Phlebotomist &mdash; "Certified" &amp; "Registered" not a level</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Number-prefixed title &mdash; e.g. Fleet SVC Agent vs 2310 Fleet SVC Agent</div><div class="sop-outcome clear">CLEAR</div></div>
+      <div class="sop-row"><div class="sop-case">Reference confirms same/similar on phone</div><div class="sop-outcome clear">CLEAR (Phone)</div></div>
+    </div>
+    <div class="sop-section">
+      <div class="sop-title">&#9888;&#65039; Close as CONSIDER / DISCREPANCY</div>
+      <div class="sop-row"><div class="sop-case">Grade 1 vs Grade 2+ &mdash; e.g. VP 1 vs VP 2</div><div class="sop-outcome consider">CONSIDER</div></div>
+      <div class="sop-row"><div class="sop-case">Department name vs full title &mdash; e.g. Sales vs Sales Manager</div><div class="sop-outcome consider">CONSIDER</div></div>
+      <div class="sop-row"><div class="sop-case">Multiple titles with mismatch in set</div><div class="sop-outcome consider">CONSIDER</div></div>
+      <div class="sop-row"><div class="sop-case">Different specialization &mdash; e.g. VP Human Resources vs VP Operations</div><div class="sop-outcome consider">CONSIDER</div></div>
+      <div class="sop-row"><div class="sop-case">Clinical level difference &mdash; LPN vs RN, CNA vs RN, APRN vs RN</div><div class="sop-outcome consider">CONSIDER</div></div>
+      <div class="sop-row"><div class="sop-case">Mismatch confirmed by phone / Email / Fax verification</div><div class="sop-outcome consider">CONSIDER</div></div>
+    </div>
+  </div>
+
+  <!-- DICTIONARY -->
+  <div class="panel" id="panel-dictionary">
+    <div class="dict-note">
+      <strong>Purpose:</strong> Add job title pairs your team has confirmed as equivalent.
+      The matcher checks this dictionary <em>first</em>. Each entry records who added it.
+      Saved permanently in browser.
+    </div>
+    <span class="field-label">Add Equivalent Pair (CLEAR)</span>
+    <div class="add-row">
+      <div class="field"><input type="text" id="dictA" placeholder="Title A"></div>
+      <div class="field"><input type="text" id="dictB" placeholder="Title B"></div>
+      <button class="btn btn-sm" id="addDictBtn">+ Add</button>
+    </div>
+    <span class="field-label">Saved Pairs (<span id="dictCount">0</span>)</span>
+    <div class="dict-list" id="dictList"></div>
+    <p class="save-note">Auto-saved to browser storage.</p>
+  </div>
+
+  <!-- ABBREVIATIONS -->
+  <div class="panel" id="panel-abbrev">
+    <p style="font-family:'Courier New',Courier,monospace;font-size:12px;color:var(--muted);margin-bottom:14px;">Official SOP abbreviations &mdash; used automatically in matching.</p>
+    <div class="abbr-wrap">
+      <table class="abbr-table">
+        <thead><tr><th>Abbreviation</th><th>Full Form</th></tr></thead>
+        <tbody id="abbrBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>&copy; Pravin Kadam &mdash; All Rights Reserved &nbsp;&middot;&nbsp; Designed &amp; Built by Pravin Kadam</footer>
+</div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ════ DATA ════ */
+var AM={
+  "a/r":"accounts receivable","admin":"administrator","admin.":"administrator",
+  "admin. asst":"administrative assistant","admin asst":"administrative assistant",
+  "adv":"advocate","adv.":"advocate","am":"assistant manager","ap":"accounts payable",
+  "assoc":"associate","asst":"assistant","avp":"associate vice president",
+  "bdm":"business development manager","brm":"business relationship manager",
+  "caa":"chief applications architect","cao":"chief administrative officer",
+  "cco":"chief contracting officer","cdo":"chief data officer",
+  "ceo":"chief executive officer","cfo":"chief financial officer",
+  "cio":"chief information officer","ciso":"chief information security officer",
+  "cito":"chief information technology officer","cmo":"chief marketing officer",
+  "cna":"certified nursing assistant","coo":"chief operating officer",
+  "cpa":"certified public accountant","cpo":"chief procurement officer",
+  "cra":"customer relations associate","csa":"customer service associate",
+  "cse":"customer service executive","csio":"chief information security officer",
+  "cso":"chief security officer","csr":"customer service representative",
+  "cto":"chief technology officer","cuo":"chief underwriting officer",
+  "dir":"director","dr":"doctor","dr.":"doctor","engr":"engineer",
+  "engnr":"engineer","exec":"executive","exec.":"executive","gm":"general manager",
+  "hha":"home health aide","hr":"human resources","hr exe":"human resources executive",
+  "hr exe.":"human resources executive","hra":"human resources associate",
+  "hris tech":"human resources information system technician",
+  "hris tech.":"human resources information system technician",
+  "hvac":"heating ventilation and air conditioning","it":"information technology",
+  "jr":"junior","lab":"laboratory","lpn":"licensed practical nurse",
+  "lvn":"licensed vocational nurse","mgmt":"management","mgr":"manager",
+  "mngr":"manager","pr":"public relations","pres":"president","qa":"quality assurance",
+  "qc":"quality control","rep":"representative","rn":"registered nurse",
+  "rna":"registered nursing assistant","serv":"service","sm":"safety manager",
+  "sme":"subject matter expert","sr":"senior","sr.":"senior",
+  "sr. mgr":"senior manager","svp":"senior vice president",
+  "sr. vp":"senior vice president","tech":"technician","temp":"temporary",
+  "vp":"vice president"
+};
+
+var TWNP=["employee","see gems for job title","blank","n/a","na","terminated","new employee","staff","default","integration: default posi","default position","integration default posi","integration: default position"];
+var INTT=["student worker","graduate student assistant","student assistant","teachers assistant","teacher's assistant","intern","internship","student intern"];
+var GP=[["waiter","waitress"],["host","hostess"],["policeman","policewoman"],["police man","police woman"],["headmaster","headmistress"],["head master","head mistress"],["steward","stewardess"],["actor","actress"],["manservant","maidservant"]];
+var NCP=[["nurse","registered nurse"],["nurse","rn"],["phlebotomist","certified phlebotomist"],["certified nursing assistant","nurse aide"],["cna","nurse aide"],["nurse aide","nurse"]];
+var NRP=[["lpn","rn"],["lpn","registered nurse"],["lvn","rn"],["lvn","registered nurse"],["cna","rn"],["cna","registered nurse"],["certified nursing assistant","rn"],["certified nursing assistant","registered nurse"],["certified nursing assistant","nurse"],["aprn","rn"],["aprn","registered nurse"],["advanced practice registered nurse","registered nurse"],["registered nurse","nurse practitioner"],["rn","nurse practitioner"],["rn","practitioner nurse"]];
+
+var ABBR_KEYS=Object.keys(AM).sort(function(a,b){return a.localeCompare(b);});
+
+/* ════ STATE ════ */
+var CU='';
+var _md=[];
+var _abbrDone=false;
+
+/* ════ HELPERS ════ */
+function n(s){return(s||'').toLowerCase().replace(/\s+/g,' ').trim();}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function inc(h,nd){return h.indexOf(nd)!==-1;}
+
+function dn(s){
+  var x=n(s).replace(/\./g,' ').replace(/,/g,' ').replace(/\s+/g,' ').trim();
+  var t=x.split(' ');
+  for(var i=0;i<t.length;i++)t[i]=AM[t[i]]||t[i];
+  return t.join(' ').replace(/\s+/g,' ').trim();
+}
+
+function grade(s){
+  var m=n(s).match(/^(.*?)\s*(\d+)$/);
+  if(m)return{b:m[1].trim(),g:parseInt(m[2])};
+  return{b:n(s),g:0};
+}
+
+function sw(s){return dn(s).split(' ').filter(Boolean).sort().join(' ');}
+function isTWN(s){var x=n(s);for(var i=0;i<TWNP.length;i++)if(TWNP[i]===x)return true;return false;}
+function isInt(s){var x=n(s);for(var i=0;i<INTT.length;i++)if(inc(x,INTT[i]))return true;return false;}
+
+/* ════ STORAGE ════ */
+function ld(){
+  try{var r=localStorage.getItem('bgv_v3');if(r){_md=JSON.parse(r);return _md.slice();}}catch(e){}
+  return _md.slice();
+}
+function sd(d){
+  _md=d.slice();
+  try{localStorage.setItem('bgv_v3',JSON.stringify(d));}catch(e){}
+}
+function cdm(a,b){
+  var na=n(a),nb=n(b),list=ld();
+  for(var i=0;i<list.length;i++){var p=list[i],p0=n(p[0]),p1=n(p[1]);if((p0===na&&p1===nb)||(p0===nb&&p1===na))return true;}
+  return false;
+}
+
+/* ════ LOGIN ════ */
+var PWD='fadv';
+
+function doLogin(){
+  var nm=document.getElementById('loginName').value.trim();
+  var pw=document.getElementById('loginPass').value;
+  var er=document.getElementById('loginError');
+  er.classList.remove('show');
+  if(!nm){document.getElementById('loginName').focus();return;}
+  if(pw!==PWD){er.classList.add('show');document.getElementById('loginPass').value='';document.getElementById('loginPass').focus();return;}
+  CU=nm;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appScreen').classList.add('visible');
+  document.getElementById('currentUserLabel').textContent=CU;
+  showToast(CU);
+  renderDict();
+}
+
+function showToast(nm){
+  var t=document.getElementById('welcomeToast');
+  t.textContent='\uD83D\uDC4B Pravin Kadam welcomes you, '+nm+', to Job Title Matcher!';
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},4500);
+}
+
+document.getElementById('loginBtn').addEventListener('click',doLogin);
+document.getElementById('loginPass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.getElementById('loginName').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('loginPass').focus();});
+
+document.getElementById('logoutBtn').addEventListener('click',function(){
+  CU='';
+  document.getElementById('loginName').value='';
+  document.getElementById('loginPass').value='';
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('appScreen').classList.remove('visible');
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('cTitle').value='';
+  document.getElementById('eTitle').value='';
+  document.getElementById('recType').value='';
+  document.getElementById('resultBox').className='result';
+  document.getElementById('resetRow').style.display='none';
+});
+
+/* ════ TABS ════ */
+document.getElementById('tabBar').addEventListener('click',function(e){
+  var btn=e.target.closest('.tab');
+  if(!btn)return;
+  var nm=btn.getAttribute('data-tab');
+  var tabs=document.querySelectorAll('.tab');
+  var pans=document.querySelectorAll('.panel');
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');
+  for(var i=0;i<pans.length;i++)pans[i].classList.remove('active');
+  btn.classList.add('active');
+  document.getElementById('panel-'+nm).classList.add('active');
+  if(nm==='dictionary')renderDict();
+  if(nm==='abbrev'&&!_abbrDone)renderAbbrev();
+});
+
+/* ════ DICTIONARY ════ */
+function renderDict(){
+  var list=ld();
+  document.getElementById('dictCount').textContent=list.length;
+  var el=document.getElementById('dictList');
+  if(!list.length){el.innerHTML='<div class="dict-empty">No custom pairs yet. Add known equivalents above.</div>';return;}
+  var h='';
+  for(var i=0;i<list.length;i++){
+    var p=list[i],by=p[2]||'Unknown',dt=p[3]||'';
+    h+='<div class="dict-item"><div class="di-body"><span class="di-titles"><strong>'+esc(p[0])+'</strong><span class="di-eq">&#8660;</span><strong>'+esc(p[1])+'</strong></span><span class="di-by">Added by <span>'+esc(by)+'</span>'+(dt?' &middot; '+esc(dt):'')+' </span></div><button class="di-del" data-i="'+i+'">&times;</button></div>';
+  }
+  el.innerHTML=h;
+}
+
+document.getElementById('dictList').addEventListener('click',function(e){
+  var btn=e.target.closest('.di-del');
+  if(!btn)return;
+  var i=parseInt(btn.getAttribute('data-i'));
+  var d=ld();d.splice(i,1);sd(d);renderDict();
+});
+
+function addDE(){
+  var a=document.getElementById('dictA').value.trim();
+  var b=document.getElementById('dictB').value.trim();
+  if(!a||!b){alert('Enter both titles.');return;}
+  var d=ld();
+  for(var i=0;i<d.length;i++){var p=d[i];if((n(p[0])===n(a)&&n(p[1])===n(b))||(n(p[0])===n(b)&&n(p[1])===n(a))){alert('Pair already exists.');return;}}
+  var now=new Date();
+  var ds=now.getDate()+'/'+(now.getMonth()+1)+'/'+now.getFullYear();
+  d.push([a,b,CU||'Unknown',ds]);
+  sd(d);
+  document.getElementById('dictA').value='';
+  document.getElementById('dictB').value='';
+  renderDict();
+}
+
+document.getElementById('addDictBtn').addEventListener('click',addDE);
+document.getElementById('dictA').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('dictB').focus();});
+document.getElementById('dictB').addEventListener('keydown',function(e){if(e.key==='Enter')addDE();});
+
+/* ════ ABBREV TABLE ════ */
+function renderAbbrev(){
+  var h='';
+  for(var i=0;i<ABBR_KEYS.length;i++)h+='<tr><td>'+esc(ABBR_KEYS[i].toUpperCase())+'</td><td>'+esc(AM[ABBR_KEYS[i]])+'</td></tr>';
+  document.getElementById('abbrBody').innerHTML=h;
+  _abbrDone=true;
+}
+
+/* ════ SOP ENGINE ════ */
+function sop(rawA,rawB,rt){
+  var na=n(rawA),nb=n(rawB),rec=n(rt||'');
+
+  if(na===nb)return{v:'CLEAR',r:'Exact title match.'};
+  if(cdm(rawA,rawB))return{v:'CLEAR',r:"Confirmed equivalent — found in your team's Custom Dictionary."};
+
+  var isTWNrec=inc(rec,'twn');
+  if(isTWNrec&&(isTWN(na)||isTWN(nb)))return{v:'CLEAR',r:'SOP Rule: TWN placeholder title vs applicant title — Close as Clear.'};
+  if(isInt(na)||isInt(nb))return{v:'CLEAR',r:'SOP Rule: Student Worker / Intern vs any title — Close as Clear/Verified.'};
+  if(/^\d+$/.test(na)||/^\d+$/.test(nb))return{v:'CLEAR',r:'SOP Rule: Job Title vs Numeric code — Close as Clear/Verified.'};
+  if(inc(na,'temporary employee')||inc(nb,'temporary employee')||na==='temp'||nb==='temp')return{v:'CLEAR',r:'SOP Rule: Job Title vs Temporary Employee — Close as Clear/Verified.'};
+
+  var ea=dn(rawA),eb=dn(rawB);
+  if(ea===eb)return{v:'CLEAR',r:'SOP Rule: Abbreviation/Initials matches full form — Close as Clear/Verified.'};
+
+  for(var gi=0;gi<GP.length;gi++){
+    var w1=GP[gi][0],w2=GP[gi][1];
+    if((inc(ea,w1)&&inc(eb,w2))||(inc(ea,w2)&&inc(eb,w1))){
+      var sa=ea.replace(w1,'').replace(w2,'').trim();
+      var sb=eb.replace(w2,'').replace(w1,'').trim();
+      if(sa===sb||!sa||!sb)return{v:'CLEAR',r:'SOP Rule: Gender variant — e.g. Waiter vs Waitress — Close as Clear/Verified.'};
+    }
+  }
+
+  if(sw(rawA)===sw(rawB))return{v:'CLEAR',r:'SOP Rule: Jumbled words, same meaning — e.g. Director of HR vs HR Director — Close as Clear/Verified.'};
+
+  if(eb.indexOf(ea)===0||ea.indexOf(eb)===0){
+    var sw10=['senior','sr','junior','jr','lead','chief','head','principal','staff','associate'];
+    var lo10=ea.length>eb.length?ea:eb;
+    var sh10=ea.length<=eb.length?ea:eb;
+    var ex10=lo10.replace(sh10,'').trim();
+    var isSen=false;
+    for(var si=0;si<sw10.length;si++){if(ex10===sw10[si]||ex10.indexOf(sw10[si]+' ')===0||ex10.lastIndexOf(' '+sw10[si])===ex10.length-sw10[si].length-1){isSen=true;break;}}
+    if(!isSen)return{v:'CLEAR',r:'SOP Rule: Truncated/incomplete title — Close as Clear/Verified.'};
+  }
+
+  if(inc(ea,eb)||inc(eb,ea)){
+    var lo11=ea.length>=eb.length?ea:eb;
+    var sh11=ea.length<eb.length?ea:eb;
+    var ex11=lo11.replace(sh11,'').trim();
+    var sw11=['senior','sr','junior','jr','lead','chief','head','principal','staff','i','ii','iii','iv','1','2','3','4','5'];
+    if(ex11&&sw11.indexOf(ex11)===-1){
+      var vpc=['vice president','vp','president','director','manager','head'];
+      var av=false,bv=false;
+      for(var vi=0;vi<vpc.length;vi++){if(ea.indexOf(vpc[vi])===0)av=true;if(eb.indexOf(vpc[vi])===0)bv=true;}
+      if(av&&bv&&ex11.length>2){
+        if(lo11.indexOf(sh11)===0)return{v:'CLEAR',r:'SOP Rule: Title vs Title+Department — Close as Clear/Verified.'};
+        return{v:'CONSIDER',r:'SOP Rule: Different department specialization — e.g. VP HR vs VP Operations — Close as Consider/Discrepancy.'};
+      }
+      return{v:'CLEAR',r:'SOP Rule: Title vs Title+Department — Close as Clear/Verified.'};
+    }
+  }
+
+  var sln=function(s){return s.replace(/^\d+\s+/,'').trim();};
+  if(sln(ea)===sln(eb))return{v:'CLEAR',r:'SOP Rule: Number-prefixed title — Close as Clear/Verified.'};
+
+  var ga=grade(ea),gb=grade(eb);
+  if(ga.b===gb.b&&ga.b.length>1){
+    var grs=[ga.g,gb.g].sort(function(a,b){return a-b;});
+    if(grs[0]===0&&grs[1]===1)return{v:'CLEAR',r:'SOP Rule: Grade (None) vs Grade 1 only — Close as Clear/Verified.'};
+    if(grs[0]!==grs[1])return{v:'CONSIDER',r:'SOP Rule: Grade level difference ('+ga.g+' vs '+gb.g+') — Close as Consider/Discrepancy.'};
+  }
+
+  for(var ni=0;ni<NCP.length;ni++){var n1=NCP[ni][0],n2=NCP[ni][1];if((inc(ea,n1)&&inc(eb,n2))||(inc(ea,n2)&&inc(eb,n1)))return{v:'CLEAR',r:'SOP Rule: Certified/Registered not a level for Nurse/CNA/Phlebotomist — Close as Clear/Verified.'};}
+  for(var ni2=0;ni2<NRP.length;ni2++){var nx1=NRP[ni2][0],nx2=NRP[ni2][1];if((ea===nx1&&eb===nx2)||(ea===nx2&&eb===nx1)||(inc(ea,nx1)&&inc(eb,nx2))||(inc(ea,nx2)&&inc(eb,nx1)))return{v:'CONSIDER',r:'SOP Rule: Clinical level difference (e.g. LPN vs RN) — Close as Consider/Discrepancy.'};}
+
+  var aw=ea.split(' '),bw=eb.split(' ');
+  if(aw.length===1&&bw.length>1&&bw[0]===aw[0])return{v:'CONSIDER',r:'SOP Rule: Department name vs full title — e.g. Sales vs Sales Manager — Close as Consider/Discrepancy.'};
+  if(bw.length===1&&aw.length>1&&aw[0]===bw[0])return{v:'CONSIDER',r:'SOP Rule: Department name vs full title — e.g. Sales vs Sales Manager — Close as Consider/Discrepancy.'};
+
+  var sp=function(s){return s.split(/[,\/]/).map(function(t){return dn(t.trim());}).filter(Boolean);};
+  var at=sp(rawA),bt=sp(rawB);
+  if(at.length>1||bt.length>1){
+    if(JSON.stringify(at.slice().sort())===JSON.stringify(bt.slice().sort()))return{v:'CLEAR',r:'SOP Rule: Multiple titles — exact same set — Close as Clear/Verified.'};
+    if(at.length===1){for(var x=0;x<bt.length;x++){if(bt[x]===at[0])return{v:'CLEAR',r:'SOP Rule: Single title matches one of multiple — Close as Clear/Verified.'};}}
+    if(bt.length===1){for(var y=0;y<at.length;y++){if(at[y]===bt[0])return{v:'CLEAR',r:'SOP Rule: Single title matches one of multiple — Close as Clear/Verified.'};}}
+    return{v:'CONSIDER',r:'SOP Rule: Multiple titles with mismatch — Close as Consider/Discrepancy.'};
+  }
+
+  if(inc(rec,'email')||inc(rec,'fax'))return{v:'CONSIDER',r:'SOP Rule: Email/Fax with mismatch — Close as Consider/Discrepancy.'};
+  return null;
+}
+
+/* ════ MAIN ════ */
+function runMatch(){
+  var ct=document.getElementById('cTitle').value.trim();
+  var et=document.getElementById('eTitle').value.trim();
+  var rec=document.getElementById('recType').value.trim();
+  if(!ct||!et){alert('Please enter both job titles.');return;}
+  document.getElementById('resultBox').className='result';
+  document.getElementById('resetRow').style.display='none';
+  var r=sop(ct,et,rec);
+  showRes(r?r.v:'CONSIDER',r?r.r:'No SOP rule matched — Close as Consider/Discrepancy. Raise in discussion group for manual review.');
+}
+
+function showRes(verdict,rule){
+  var v=verdict.toUpperCase();
+  var isCl=v==='CLEAR'||v==='VERIFIED'||inc(v,'CLEAR');
+  var isCo=v==='CONSIDER'||inc(v,'CONSIDER');
+  var cls=isCl?'clear':isCo?'consider':'discrepancy';
+  var box=document.getElementById('resultBox');
+  box.className='result show '+cls;
+  document.getElementById('vIcon').textContent=isCl?'\u2705':isCo?'\u26A0\uFE0F':'\u274C';
+  document.getElementById('vWord').textContent=isCl?'CLEAR / VERIFIED':isCo?'CONSIDER / DISCREPANCY':'DISCREPANCY';
+  document.getElementById('vRule').textContent=rule;
+  document.getElementById('resetRow').style.display='block';
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function resetM(){
+  document.getElementById('cTitle').value='';
+  document.getElementById('eTitle').value='';
+  document.getElementById('recType').value='';
+  document.getElementById('resultBox').className='result';
+  document.getElementById('resetRow').style.display='none';
+  document.getElementById('cTitle').focus();
+}
+
+document.getElementById('matchBtn').addEventListener('click',runMatch);
+document.getElementById('resetBtn').addEventListener('click',resetM);
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'){
+    var a=document.querySelector('.panel.active');
+    if(a&&a.id==='panel-matcher')runMatch();
+  }
+});
+
+ld();
+})();
+</script>
+</body>
+</html>
